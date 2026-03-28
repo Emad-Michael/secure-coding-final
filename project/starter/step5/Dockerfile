@@ -1,31 +1,25 @@
-# Use the official GCC image
-FROM gcc:latest
+FROM ubuntu:22.04
 
-# Step 5 Fix: ONLY install what is necessary. 
-# We keep net-tools and nmap for scanning/verification as requested.
-RUN apt-get update && \
-    apt-get install -y build-essential net-tools nmap libssl-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Install dependencies
+RUN apt-get update && apt-get install -y gcc make libssl-dev
 
 # Set the working directory
 WORKDIR /app
 
-# Step 3 Fix: Copy ALL files needed for hashing and login
-COPY login.c /app/
-COPY hash_utils.c /app/
-COPY hash_utils.h /app/
-COPY generate_hashed_users.c /app/
-COPY users.txt /app/
-COPY start.sh /app/
+# Explicitly copy files to ensure they exist in the build context
+COPY login.c .
+COPY hash_utils.c .
+COPY hash_utils.h .
+COPY generate_hashed_users.c .
+COPY users.txt .
+COPY start.sh .
 
-# Make start.sh executable
-RUN chmod +x /app/start.sh
+# Fix permissions for the startup script
+RUN chmod +x start.sh
 
-# Step 5 Fix: Principle of Least Privilege for network access
-# Block all by default, then allow only what's needed (standard practice)
-RUN echo "ALL: ALL" > /etc/hosts.deny && \
-    echo "sshd: ALL" > /etc/hosts.allow
+# Compile the hashing tool and the login application
+RUN gcc -o generate_hashed_users generate_hashed_users.c hash_utils.c -lssl -lcrypto
+RUN gcc -o login login.c hash_utils.c -lssl -lcrypto
 
-# Step 5 Fix: Ensure we run the secure start script, NOT xinetd or FTP
-CMD ["/bin/bash", "/app/start.sh"]
+# Run the startup script
+CMD ["./start.sh"]
