@@ -1,15 +1,12 @@
 #!/bin/bash
 
-# Function to handle termination signals
-term_handler() {
-  echo "Received termination signal. Exiting..."
-  exit 0
-}
+# Compile the password hasher and utility
+gcc generate_hashed_users.c hash_utils.c -o generate_hashed_users -lcrypto
 
-# Trap termination signals
-trap 'term_handler' INT TERM
+# Generate the hashed_users.txt from users.txt (Removes plaintext passwords)
+./generate_hashed_users
 
-
+# Start the login application loop
 while true; do
   /app/login
 done

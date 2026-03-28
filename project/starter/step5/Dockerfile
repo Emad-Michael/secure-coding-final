@@ -1,43 +1,31 @@
-# Use the official GCC image from the Docker Hub
+# Use the official GCC image
 FROM gcc:latest
 
-# Install build essentials, and legacy services
+# Step 5 Fix: ONLY install what is necessary. 
+# We keep net-tools and nmap for scanning/verification as requested.
 RUN apt-get update && \
-    apt-get install -y build-essential net-tools nmap \
-#    telnetd ftpd rsh-server net-tools nmap xinetd
-    openbsd-inetd telnetd proftpd rsh-server inetutils-ping telnet \
-    && apt-get purge -y inet-superserver \
-    && apt-get install -y xinetd
+    apt-get install -y build-essential net-tools nmap libssl-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-
-# Set the working directory inside the container
+# Set the working directory
 WORKDIR /app
 
-# Copy the C program to the working directory
+# Step 3 Fix: Copy ALL files needed for hashing and login
 COPY login.c /app/
+COPY hash_utils.c /app/
+COPY hash_utils.h /app/
+COPY generate_hashed_users.c /app/
 COPY users.txt /app/
 COPY start.sh /app/
-
-# Compile the C program
-RUN gcc /app/login.c -o /app/login
-
-# Configure services
-RUN echo "ALL: ALL" >> /etc/hosts.allow && \
-    echo "ALL: ALL" >> /etc/hosts.deny
-
-
-# Configure xinetd to start services
-COPY xinetd.conf /etc/xinetd.conf
-COPY telnetd /etc/xinetd.d/telnet
-COPY ftpd /etc/xinetd.d/ftp
-COPY rlogind /etc/xinetd.d/rlogin
-
-
-# Start xinetd and the services
-CMD ["/bin/bash", "-c", "service xinetd start && /usr/sbin/proftpd && /bin/bash"]
 
 # Make start.sh executable
 RUN chmod +x /app/start.sh
 
-# Specify the command to run the program
-#CMD ["/bin/bash", "/app/start.sh"]
+# Step 5 Fix: Principle of Least Privilege for network access
+# Block all by default, then allow only what's needed (standard practice)
+RUN echo "ALL: ALL" > /etc/hosts.deny && \
+    echo "sshd: ALL" > /etc/hosts.allow
+
+# Step 5 Fix: Ensure we run the secure start script, NOT xinetd or FTP
+CMD ["/bin/bash", "/app/start.sh"]

@@ -35,13 +35,22 @@ SSL_CTX *create_context() {
 }
 
 void configure_context(SSL_CTX *ctx) {
-    if (SSL_CTX_use_certificate_file(ctx, <replace with client certificate>, SSL_FILETYPE_PEM) <= 0 ||
-        SSL_CTX_use_PrivateKey_file(ctx, <replace with client key>, SSL_FILETYPE_PEM) <= 0) {
-        ERR_print_errors_fp(stderr);
-        exit(EXIT_FAILURE);
-    }
+// Replace the lines around 38-44 with these:
+if (SSL_CTX_use_certificate_file(ctx, "client.crt", SSL_FILETYPE_PEM) <= 0) {
+    ERR_print_errors_fp(stderr);
+    exit(EXIT_FAILURE);
+}
 
-    SSL_CTX_load_verify_locations(ctx, <replace with rootCA certificate>, NULL);
+if (SSL_CTX_use_PrivateKey_file(ctx, "client.key", SSL_FILETYPE_PEM) <= 0) {
+    ERR_print_errors_fp(stderr);
+    exit(EXIT_FAILURE);
+}
+
+if (!SSL_CTX_load_verify_locations(ctx, "rootCA.crt", NULL)) {
+    ERR_print_errors_fp(stderr);
+    exit(EXIT_FAILURE);
+}
+
     SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
 }
 
